@@ -1,0 +1,30 @@
+language: cpp
+sudo: false
+
+addons:
+  apt:
+    packages:
+    - liblog4cxx10-dev
+
+before_install:
+ - bash .travis-install-hdf5.sh
+
+cache:
+  directories:
+  - "$HOME/hdf5-1.10.4"
+
+install:
+- mkdir -p cmake-build
+- mkdir -p prefix
+- pushd cmake-build
+- cmake -DCMAKE_INSTALL_PREFIX=../prefix -DHDF5_ROOT=$HOME/hdf5-1.10.4 ..
+- make VERBOSE=1
+- make install
+- popd
+
+script:
+- ls -alh prefix/*
+- ldd prefix/bin/h5vds-replace-paths
+- prefix/bin/h5vds-replace-paths --help
+- prefix/bin/h5vds-replace-paths test/vds.h5 /dls ..
+
