@@ -26,7 +26,7 @@ struct OperatorData {
  */
 herr_t iter_callback(hid_t loc_id, const char *name, const H5L_info_t *info, void *operator_data);
 bool is_virtual(hid_t loc_id, const std::string& name);
-hid_t substitute_vds_mapping(hid_t dcpl, const std::string& src_vds_path, const std::string& src_vds_path_substitute, size_t *count=nullptr);
+hid_t substitute_vds_mapping(hid_t dcpl, const std::string& src_vds_path, const std::string& src_vds_path_substitute, size_t *count=NULL);
 hid_t replace_vds_dset(hid_t loc_id, const std::string& name, hid_t vds_map_dcpl);
 
 /*
@@ -72,7 +72,7 @@ int main (int argc, char * argv[])
 
   // initialize the operator data structure.
   op_data.recursion = 0;
-  op_data.prev = nullptr;
+  op_data.prev = NULL;
   op_data.group_addr = infobuf.addr;
   op_data.src_file_prefix = std::string(argv[2]);
   op_data.src_file_new_prefix = std::string(argv[3]);
@@ -92,7 +92,7 @@ int main (int argc, char * argv[])
   /*
    * Print the root group and formatting, begin iteration.
    */
-  status = H5Literate(file, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, iter_callback, (void *) &op_data);
+  status = H5Literate(file, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, iter_callback, (void *) &op_data);
   if (status < 0) {
     std::cerr << "H5Literate returned error..." << std::endl;
   }
@@ -236,7 +236,7 @@ hid_t substitute_vds_mapping(hid_t dcpl,
     H5Pset_virtual(new_dcpl, vds_vspace, src_filename.c_str(), vds_src_dset, vds_src_dspace);
   }
   std::cout << "  Replacing: " << c << " paths." << std::endl;
-  if (count != nullptr) { *count = c; }
+  if (count != NULL) { *count = c; }
 
   // If the new property list doesn't have any new mappings then close it and return -1.
   if (c <= 0) {
