@@ -10,6 +10,32 @@ set(CMAKE_CXX_STANDARD 98)
 # installation location to search.
 message("\nSearching for HDF5")
 
+# Staticly linking against HDF5... This is a pain. Switching off and setting rpath instead...
+#SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+# Allow macOS shared (dynamic) libraries to link with undefined symbols
+if (APPLE)
+    message("Allowing undefined symbols in macOS shared library linking")
+    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
+endif(APPLE)
+
+# Set up RPATH handling correctly so that both built and installed targets have the appropriate
+# settings - see https://cmake.org/Wiki/CMake_RPATH_handling
+# Use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+# When building, don't use the install RPATH already (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+# Add the automatically determined parts of the RPATH which point to directories outside the
+# build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+# The RPATH to be used when installing, but only if it's not a system directory
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
+
 IF (HDF5_ROOT)
     message(STATUS "HDF5_ROOT set: " ${HDF5_ROOT})
     set( ENV{HDF5_ROOT} ${HDF5_ROOT} )
@@ -36,6 +62,7 @@ ELSE(HDF5_ROOT)
     find_package(HDF5 1.10.2
             COMPONENTS C HL)
 ENDIF(HDF5_ROOT)
+message(STATUS "Found HDF5 libs: " ${HDF5_LIBRARIES})
 
 include_directories(${HDF5_INCLUDE_DIRS})
 add_executable(h5vds-replace-paths main.cpp)
