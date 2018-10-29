@@ -1,3 +1,13 @@
+# IDE stuff
+*~
+*.swp
+.idea/
+cmake-build-debug/
+cmake-build-release/
+build_name.log
+build_name.sta
+prefix/
+
 # Prerequisites
 *.d
 
