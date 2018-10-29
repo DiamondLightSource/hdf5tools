@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.12)
-project(vdstools CXX)
+cmake_minimum_required(VERSION 3.9.6)
+project(hdf5tools CXX)
 
 set(CMAKE_CXX_STANDARD 98)
 
@@ -38,5 +38,6 @@ ELSE(HDF5_ROOT)
 ENDIF(HDF5_ROOT)
 
 include_directories(${HDF5_INCLUDE_DIRS})
-add_executable(vdstool main.cpp)
-target_link_libraries(vdstool ${HDF5_LIBRARIES} )
+add_executable(h5vds-replace-paths main.cpp)
+target_link_libraries(h5vds-replace-paths ${HDF5_LIBRARIES})
+install(TARGETS h5vds-replace-paths RUNTIME DESTINATION bin)

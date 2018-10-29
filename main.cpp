@@ -48,8 +48,8 @@ int main (int argc, char * argv[])
   H5O_info_t      infobuf;
   struct OperatorData   op_data;
   std::stringstream ss;
-  ss << "usage: vdstool FILE FROM TO" << std::endl;
-  ss << std::endl << "  FILE: HDF5 file to operate on. The file will be modified in-place" << std::endl;
+  ss << "Usage: h5vds-replace-paths FILE FROM TO" << std::endl << std::endl;
+  ss << "  FILE: HDF5 file to operate on. The file will be modified in-place" << std::endl;
   ss << "  FROM: VDS source file path to match and replace" << std::endl;
   ss << "    TO: VDS source file path to insert in place of FROM" << std::endl;
 
