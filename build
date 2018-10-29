@@ -1,0 +1,14 @@
+PROGRAM=hdf5tools
+VERSION=0.0.1
+TAR_FILE=none
+
+build()
+{
+    # Add dependencies to the path, just in case the build system
+    # attempts to run binaries like compilers etc from the environment.
+    export PATH=$CMAKE_BIN:$PATH
+
+    cmake -DHDF5_ROOT=$HDF5_PREFIX -DCMAKE_INSTALL_PREFIX=$TARGET_PREFIX ..
+    make VERBOSE=1
+    make install
+}

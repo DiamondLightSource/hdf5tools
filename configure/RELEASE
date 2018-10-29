@@ -1,0 +1,2 @@
+CMAKE = $(TOOLS_SUPPORT)/cmake/3-9-6
+HDF5 = $(TOOLS_SUPPORT)/hdf5/1-10-4
