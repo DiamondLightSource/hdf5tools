@@ -1,0 +1,2 @@
+gitolite ssh://dascgitolite@dasc-git.diamond.ac.uk/controls/tools/hdf5tools.git
+dls-controls git@github.com:dls-controls/hdf5tools.git
