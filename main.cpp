@@ -28,6 +28,10 @@ herr_t iter_callback(hid_t loc_id, const char *name, const H5L_info_t *info, voi
 bool is_virtual(hid_t loc_id, const std::string& name);
 hid_t substitute_vds_mapping(hid_t dcpl, const std::string& src_vds_path, const std::string& src_vds_path_substitute, size_t *count=NULL);
 hid_t replace_vds_dset(hid_t loc_id, const std::string& name, hid_t vds_map_dcpl);
+herr_t attr_iter_callback(hid_t loc_id, const char *attr_name, const H5A_info_t *ainfo, void* usr_data);
+herr_t copy_attribute(hid_t src_attr_loc_id, const std::string& src_attr_name, hid_t dst_dset);
+hid_t copy_attributes(hid_t src_dset, hid_t dst_dset);
+
 
 /*
  * Function to check for duplicate groups in a path.
@@ -266,19 +270,98 @@ hid_t replace_vds_dset(hid_t loc_id, const std::string& name, hid_t vds_map_dcpl
   hid_t vds_dtype = H5Dget_type(vds_dset);
   hid_t vds_dspace = H5Dget_space(vds_dset);
 
+  // create new DSET with temporary name, using new vds_map_dcpl
+  new_dset = H5Dcreate2(loc_id, "tmp", vds_dtype, vds_dspace,
+                        H5P_LINK_CREATE_DEFAULT, vds_map_dcpl, H5P_DATASET_ACCESS_DEFAULT);
+  if (new_dset < 0) {
+    std::cerr << "Error creating copy VDS: tmp for " << name << std::endl;
+  }
+
+  // copy all attributes from original vds to new vds
+  copy_attributes(vds_dset, new_dset);
+
   H5Dclose(vds_dset);
+
   status = H5Ldelete(loc_id, name.c_str(), H5P_LINK_ACCESS_DEFAULT);
   if (status < 0) {
     std::cerr << "failed to delete original VDS: " << name << std::endl;
   }
-  new_dset = H5Dcreate2(loc_id, name.c_str(), vds_dtype, vds_dspace,
-      H5P_LINK_CREATE_DEFAULT, vds_map_dcpl, H5P_DATASET_ACCESS_DEFAULT);
-  if (new_dset < 0) {
-    std::cerr << "Error creating copy VDS: " << name << std::endl;
+
+  // change name of new VDS to name of old VDS using H5Lmove
+  status = H5Lmove(loc_id, "tmp", loc_id, name.c_str(), H5P_LINK_CREATE_DEFAULT, H5P_LINK_ACCESS_DEFAULT);
+  if (status < 0) {
+    std::cerr << "failed to move tmp VDS into: " << name << std::endl;
   }
+
   H5Tclose(vds_dtype);
   H5Sclose(vds_dspace);
   return new_dset;
+}
+
+hid_t copy_attributes(hid_t src_dset, hid_t dst_dset)
+{
+  herr_t status;
+  hsize_t n = 1;
+  hid_t usr_data = dst_dset;
+  status = H5Aiterate2(src_dset, H5_INDEX_NAME, H5_ITER_NATIVE, &n, attr_iter_callback, static_cast<void*>(&usr_data));
+  return status;
+}
+
+
+herr_t attr_iter_callback(hid_t loc_id, const char *attr_name, const H5A_info_t *ainfo, void* usr_data)
+{
+  herr_t status;
+  hid_t dst_dset = *static_cast<hid_t*>(usr_data);
+  std::string attr_name_str(attr_name);
+  status = copy_attribute(loc_id, attr_name_str, dst_dset);
+  return status;
+}
+
+herr_t copy_attribute(hid_t src_attr_loc_id, const std::string& src_attr_name, hid_t dst_dset)
+{
+    herr_t status;
+    std::cout << "  Copying attribute: " << src_attr_name << std::endl;
+    hid_t attr_id = H5Aopen_by_name(src_attr_loc_id, ".", src_attr_name.c_str(), H5P_DEFAULT, H5P_LINK_ACCESS_DEFAULT);
+
+    size_t data_size = H5Aget_storage_size(attr_id);
+    void * pdata = calloc(1, data_size);
+
+    hid_t dspace = H5Aget_space(attr_id);
+    hid_t dtype = H5Aget_type(attr_id);
+    status = H5Aread(attr_id, dtype, pdata);
+    if (status <= 0) {
+        std::cerr << "Failed to read data (" << data_size << " bytes) from attribute: "
+                  << src_attr_name << std::endl;
+        H5Tclose(dtype);
+        H5Sclose(dspace);
+        free(pdata);
+        return status;
+    }
+
+    hid_t new_attr_id = H5Acreate2(dst_dset, src_attr_name.c_str(), dtype, dspace, H5P_ATTRIBUTE_CREATE_DEFAULT, H5P_ATTRIBUTE_ACCESS_DEFAULT);
+    if (new_attr_id <= 0) {
+        std::cerr << "Unable to create attribute: " << src_attr_name << std::endl;
+        H5Tclose(dtype);
+        H5Sclose(dspace);
+        free(pdata);
+        return -1;
+    }
+
+    status = H5Awrite(new_attr_id, dtype, pdata);
+    if (status <= 0) {
+        std::cerr << "Failed to write to attribute: " << src_attr_name << std::endl;
+        H5Aclose(new_attr_id);
+        H5Tclose(dtype);
+        H5Sclose(dspace);
+        free(pdata);
+        return status;
+    }
+
+    H5Aclose(new_attr_id);
+    H5Tclose(dtype);
+    H5Sclose(dspace);
+    free(pdata);
+    return 0;
 }
 
 /************************************************************
