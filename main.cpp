@@ -1,11 +1,10 @@
-
-#include "hdf5.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <hdf5.h>
 
 /*
  * Define operator data structure type for H5Literate callback.
@@ -232,15 +231,18 @@ hid_t substitute_vds_mapping(hid_t dcpl,
     // if the path is found. Otherwise just carry over the existing VDS src path.
     std::string src_filename(vds_src_file);
     size_t pos = src_filename.find(src_vds_path);
-    if (pos != std::string::npos) {
+    if (pos != std::string::npos) { // if the string was found we replace it
       src_filename.replace(pos, src_vds_path.length(), src_vds_path_substitute);
-      std::cout << " --> " << src_filename << ":" << vds_src_dset << std::endl;
-      c++;
-    } else {
-      std::cout << " (no substitution)" << std::endl;
+      // double check that src and dst filename are indeed different (empty input strings could trigger false change)
+      if (src_filename != vds_src_file) {
+        std::cout << " --> " << src_filename << ":" << vds_src_dset << std::endl;
+        c++;
+      } else {
+        std::cout << " (no substitution)" << std::endl;
+      }
+      // Add new mapping to new dataset creation property list
+      H5Pset_virtual(new_dcpl, vds_vspace, src_filename.c_str(), vds_src_dset, vds_src_dspace);
     }
-    // Add mapping to new dataset creation property list
-    H5Pset_virtual(new_dcpl, vds_vspace, src_filename.c_str(), vds_src_dset, vds_src_dspace);
   }
   std::cout << "  Replacing: " << c << " paths." << std::endl;
   if (count != NULL) { *count = c; }
