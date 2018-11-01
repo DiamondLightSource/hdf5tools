@@ -289,13 +289,13 @@ hid_t replace_vds_dset(hid_t loc_id, const std::string& name, hid_t vds_map_dcpl
 
   status = H5Ldelete(loc_id, name.c_str(), H5P_LINK_ACCESS_DEFAULT);
   if (status < 0) {
-    std::cerr << "failed to delete original VDS: " << name << std::endl;
+    std::cerr << "failed to delete original VDS link: " << name << std::endl;
   }
 
   // change name of new VDS to name of old VDS using H5Lmove
   status = H5Lmove(loc_id, "tmp", loc_id, name.c_str(), H5P_LINK_CREATE_DEFAULT, H5P_LINK_ACCESS_DEFAULT);
   if (status < 0) {
-    std::cerr << "failed to move tmp VDS into: " << name << std::endl;
+    std::cerr << "failed to move tmp VDS link into: " << name << std::endl;
   }
 
   H5Tclose(vds_dtype);
@@ -306,9 +306,8 @@ hid_t replace_vds_dset(hid_t loc_id, const std::string& name, hid_t vds_map_dcpl
 hid_t copy_attributes(hid_t src_dset, hid_t dst_dset)
 {
   herr_t status;
-  hsize_t n = 1;
   hid_t usr_data = dst_dset;
-  status = H5Aiterate2(src_dset, H5_INDEX_NAME, H5_ITER_NATIVE, &n, attr_iter_callback, static_cast<void*>(&usr_data));
+  status = H5Aiterate2(src_dset, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, attr_iter_callback, static_cast<void*>(&usr_data));
   return status;
 }
 
@@ -334,7 +333,7 @@ herr_t copy_attribute(hid_t src_attr_loc_id, const std::string& src_attr_name, h
     hid_t dspace = H5Aget_space(attr_id);
     hid_t dtype = H5Aget_type(attr_id);
     status = H5Aread(attr_id, dtype, pdata);
-    if (status <= 0) {
+    if (status < 0) {
         std::cerr << "Failed to read data (" << data_size << " bytes) from attribute: "
                   << src_attr_name << std::endl;
         H5Tclose(dtype);
@@ -353,7 +352,7 @@ herr_t copy_attribute(hid_t src_attr_loc_id, const std::string& src_attr_name, h
     }
 
     status = H5Awrite(new_attr_id, dtype, pdata);
-    if (status <= 0) {
+    if (status < 0) {
         std::cerr << "Failed to write to attribute: " << src_attr_name << std::endl;
         H5Aclose(new_attr_id);
         H5Tclose(dtype);
