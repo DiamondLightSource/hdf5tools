@@ -26,5 +26,5 @@ script:
 - ls -alh prefix/*
 - ldd prefix/bin/h5vds-replace-paths
 - prefix/bin/h5vds-replace-paths --help
-- prefix/bin/h5vds-replace-paths test/vds.h5 /dls ..
+- prefix/bin/h5vds-replace-paths test/smallvds.h5 /dls ..
 
