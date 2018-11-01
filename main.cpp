@@ -142,6 +142,8 @@ herr_t iter_callback(hid_t loc_id, const char *pname, const H5L_info_t *info, vo
         next_op_data.recursion = op_data->recursion + 1;
         next_op_data.prev = op_data;
         next_op_data.group_addr = info_buf.addr;
+        next_op_data.src_file_new_prefix = op_data->src_file_new_prefix;
+        next_op_data.src_file_prefix = op_data->src_file_prefix;
         return_val = H5Literate_by_name(loc_id, name.c_str(), H5_INDEX_NAME,
                                         H5_ITER_NATIVE, NULL, iter_callback,
                                         (void *) &next_op_data, H5P_DEFAULT);
@@ -211,6 +213,7 @@ hid_t substitute_vds_mapping(hid_t dcpl,
   size_t virtual_count;
   H5Pget_virtual_count(dcpl, &virtual_count);
   std::cout << "  VDS mapping count: " << virtual_count << std::endl;
+  std::cout << "  Substituting '" << src_vds_path << "' with: '" << src_vds_path_substitute << "'" << std::endl;
 
   // New dset create plist with new src filenames
   new_dcpl = H5Pcreate (H5P_DATASET_CREATE);
