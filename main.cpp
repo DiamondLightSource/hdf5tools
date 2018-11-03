@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <vector>
+#include <map>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
@@ -118,7 +118,7 @@ herr_t iter_callback(hid_t loc_id, const char *pname, const H5L_info_t *info, vo
   H5O_info_t info_buf;
   struct OperatorData   *op_data = (struct OperatorData *) operator_data;
   std::string name(pname);
-  static std::vector<haddr_t> vds_addr_list; // list of modified VDS
+  static std::map<haddr_t, std::pair<hid_t, std::string> > mod_vds_map; // map of modified VDS (key=addr, val=(loc_id,name) )
 
   /*
    * Get type of the object we're dealing with in this callback instance
@@ -155,15 +155,24 @@ herr_t iter_callback(hid_t loc_id, const char *pname, const H5L_info_t *info, vo
       std::cout << "Dataset: " << name <<  " (addr: " << info->u.address << ")" << std::endl;
       if (is_virtual(loc_id, name)) {
         // First check if this VDS has already been changed (i.e. if if is a hardlink)
-        if (std::find(vds_addr_list.begin(), vds_addr_list.end(), info->u.address) != vds_addr_list.end()) {
+        std::map<haddr_t, std::pair<hid_t, std::string> >::iterator mod_vds_map_it = mod_vds_map.find(info->u.address);
+        if (mod_vds_map_it != mod_vds_map.end()) {
           // This VDS has already been changed so lets hardlink it to where it is now
           // Delete the current hardlink link
-          std::cout << "Hardlink detected for " << name << std::endl;
+          std::cout << "Hardlink detected for " << name << " (to: "
+                    << mod_vds_map_it->second.second << ")" << std::endl;
           status = H5Ldelete(loc_id, name.c_str(), H5P_LINK_ACCESS_DEFAULT);
           if (status < 0) {
             std::cerr << "failed to delete original hardlink link: " << name << std::endl;
           }
+          std::cout << "re-creating hardlink" << std::endl;
           // TODO: re-create hardlink to new dataset
+          status = H5Lcreate_hard(mod_vds_map_it->second.first, mod_vds_map_it->second.second.c_str(),
+                                  loc_id, name.c_str(),
+                                  H5P_LINK_CREATE_DEFAULT, H5P_LINK_ACCESS_DEFAULT);
+          if (status < 0) {
+              std::cerr << "failed to create new hardlink link: " << name << std::endl;
+          }
         } else {
           // This has not been changed already so we will check and replace it
           hid_t vds_dset = H5Dopen(loc_id, name.c_str(), H5P_DATASET_ACCESS_DEFAULT);
@@ -177,7 +186,7 @@ herr_t iter_callback(hid_t loc_id, const char *pname, const H5L_info_t *info, vo
             vds_dset = replace_vds_dset( loc_id, name, new_dcpl);
             H5Dclose(vds_dset);
             H5Pclose(new_dcpl);
-            vds_addr_list.push_back(info->u.address); // register the address to the object that we have just recreated.
+              mod_vds_map[info->u.address] = std::pair<hid_t, std::string>(loc_id, name); // register the address to the object that we have just recreated.
           }
         }
       }
