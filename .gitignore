@@ -2,11 +2,12 @@
 *~
 *.swp
 .idea/
-cmake-build-debug/
-cmake-build-release/
+cmake-build-*/
 build_name.log
 build_name.sta
 prefix/
+xcode/
+vds.h5
 
 # Prerequisites
 *.d
