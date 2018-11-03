@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <hdf5.h>
@@ -116,6 +118,7 @@ herr_t iter_callback(hid_t loc_id, const char *pname, const H5L_info_t *info, vo
   H5O_info_t info_buf;
   struct OperatorData   *op_data = (struct OperatorData *) operator_data;
   std::string name(pname);
+  static std::vector<haddr_t> vds_addr_list; // list of modified VDS
 
   /*
    * Get type of the object we're dealing with in this callback instance
@@ -149,19 +152,33 @@ herr_t iter_callback(hid_t loc_id, const char *pname, const H5L_info_t *info, vo
       }
       break;
     case H5O_TYPE_DATASET:
-      std::cout << "Dataset: " << name << std::endl;
+      std::cout << "Dataset: " << name <<  " (addr: " << info->u.address << ")" << std::endl;
       if (is_virtual(loc_id, name)) {
-        hid_t vds_dset = H5Dopen(loc_id, name.c_str(), H5P_DATASET_ACCESS_DEFAULT);
-        hid_t vds_dcpl = H5Dget_create_plist( vds_dset );
-        hid_t new_dcpl = substitute_vds_mapping(vds_dcpl,
-            op_data->src_file_prefix,
-            op_data->src_file_new_prefix);
-        H5Pclose(vds_dcpl);
-        H5Dclose(vds_dset);
-        if (new_dcpl > 0) {
-          vds_dset = replace_vds_dset( loc_id, name, new_dcpl);
+        // First check if this VDS has already been changed (i.e. if if is a hardlink)
+        if (std::find(vds_addr_list.begin(), vds_addr_list.end(), info->u.address) != vds_addr_list.end()) {
+          // This VDS has already been changed so lets hardlink it to where it is now
+          // Delete the current hardlink link
+          std::cout << "Hardlink detected for " << name << std::endl;
+          status = H5Ldelete(loc_id, name.c_str(), H5P_LINK_ACCESS_DEFAULT);
+          if (status < 0) {
+            std::cerr << "failed to delete original hardlink link: " << name << std::endl;
+          }
+          // TODO: re-create hardlink to new dataset
+        } else {
+          // This has not been changed already so we will check and replace it
+          hid_t vds_dset = H5Dopen(loc_id, name.c_str(), H5P_DATASET_ACCESS_DEFAULT);
+          hid_t vds_dcpl = H5Dget_create_plist( vds_dset );
+          hid_t new_dcpl = substitute_vds_mapping(vds_dcpl,
+                                                  op_data->src_file_prefix,
+                                                  op_data->src_file_new_prefix);
+          H5Pclose(vds_dcpl);
           H5Dclose(vds_dset);
-          H5Pclose(new_dcpl);
+          if (new_dcpl > 0) {
+            vds_dset = replace_vds_dset( loc_id, name, new_dcpl);
+            H5Dclose(vds_dset);
+            H5Pclose(new_dcpl);
+            vds_addr_list.push_back(info->u.address); // register the address to the object that we have just recreated.
+          }
         }
       }
       break;
@@ -238,10 +255,12 @@ hid_t substitute_vds_mapping(hid_t dcpl,
         std::cout << " --> " << src_filename << ":" << vds_src_dset << std::endl;
         c++;
       } else {
-        std::cout << " (no substitution)" << std::endl;
+          std::cout << " (no substitution)" << std::endl;
       }
       // Add new mapping to new dataset creation property list
       H5Pset_virtual(new_dcpl, vds_vspace, src_filename.c_str(), vds_src_dset, vds_src_dspace);
+    } else {
+        std::cout << " (no substitution)" << std::endl;
     }
   }
   std::cout << "  Replacing: " << c << " paths." << std::endl;
