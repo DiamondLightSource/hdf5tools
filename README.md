@@ -20,7 +20,5 @@ original name.
 Note that the original VDS can not be fully deleted from the HDF5 file as the HDF5 library does
 not ship with a delete feature. However, the dataset when unlinked is no longer accessible.
 
-Note that hardlinks can not be detected as links and are treated as a normal dataset (or VDS).
-As a result, this application recreates the hardlink VDS as a normal VDS - i.e. it is no longer
-a link.
+Support for hardlinks (to virtual datasets): hardlinks are detected and re-created to new VDS.
  
