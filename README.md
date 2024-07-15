@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/dls-controls/hdf5tools.svg?branch=master)](https://travis-ci.org/dls-controls/hdf5tools)
+[![Build Status](https://travis-ci.org/DiamondLightSource/hdf5tools.svg?branch=master)](https://travis-ci.org/DiamondLightSource/hdf5tools)
 
 # vdstools
 Tools to manipulate HDF5 Virtual Dataset (VDS)
